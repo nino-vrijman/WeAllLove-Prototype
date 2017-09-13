@@ -12,7 +12,7 @@ app.get('/', function (req, res) {
 });
 
 http.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
+  console.log(`Server: app listening on port ${PORT}`);
 });
 
 io.on('connection', function (socket) {
@@ -20,8 +20,8 @@ io.on('connection', function (socket) {
 });
 
 const BOARD_COM_PORT = "COM5";
-let five = require('johnny-five');
-let board = new five.Board({ port: BOARD_COM_PORT });
+const five = require('johnny-five');
+const board = new five.Board({ port: BOARD_COM_PORT });
 
 board.on('ready', function () {
   console.log('Arduino: board ready!');
@@ -32,8 +32,8 @@ board.on('ready', function () {
     freq: 500
   });
 
-  motion.on("calibrated", function () {
-    console.log("calibrated");
+  motion.on('calibrated', function () {
+    console.log('Motion sensor: calibrated');
   });
 
   motion.on('data', function (event) {
