@@ -1,7 +1,15 @@
 # WeAllLove-Prototype
+## Installation
+Install drivers for the Arduino which can be found [here](http://www.ftdichip.com/Drivers/VCP.htm).
 
-Run 'npm install' to install all dependencies.
+Install the dependencies.
+```sh
+npm install
+```
 
-Run 'node .' to start the NodeJS server.
+Connect the Arduino with a USB cable.
 
-Navigate to 'localhost:3000' in your browser to use the prototype.
+Start the NodeJS server and navigate to [localhost:3000](http://localhost:3000/) in your browser to use the prototype. 
+```sh
+node .
+```
