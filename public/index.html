@@ -117,6 +117,7 @@
     function NewValue(detectedMotion){
         console.log(getal);
         if (getal >= 92) {
+            getal = 100;
             if (confettiStarted) {
                 return 100;
             }
@@ -144,6 +145,8 @@
     function onSensorUpdate(data) {
         const detectedMotion = data.detectedMotion;
         gauge5.update(NewValue(detectedMotion));
+        // sendMeterPercentage in 'index.js'
+        sendMeterPercentage(getal);
     }
 
     // END METER SCRIPT

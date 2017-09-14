@@ -31,7 +31,25 @@ http.listen(PORT, () => {
 
 io.on('connection', function (socket) {
   console.log('Socket: client connected');
+  socket.on('percentage updated',  function (data) {
+    let currentPercentage = data;
+    if (currentPercentage === 100) {
+      turnOnGreenLed();
+    } else {
+      turnOffGreenLed();
+    }
+  });
 });
+
+const MOTION_DETECTED_LED = 13;
+const GREEN_LED = 5;
+const LEFT_RED_LED = 3;
+const RIGHT_RED_LED = 4;
+
+let motionDetectedLed = {};
+let greenLed = {};
+let leftRedLed = {};
+let rightRedLed = {};
 
 // const BOARD_COM_PORT = "COM5";
 // const five = require('johnny-five');
@@ -42,7 +60,9 @@ io.on('connection', function (socket) {
 // board.on('ready', function () {
 //   console.log('Arduino: board ready!');
 
-//   let led = new five.Led(13);
+//   motionDetectedLed = new five.Led(MOTION_DETECTED_LED);
+//   greenLed = new five.Led(GREEN_LED);
+
 //   let motion = new five.Motion({
 //     pin: 2,
 //     freq: 500
@@ -54,14 +74,30 @@ io.on('connection', function (socket) {
 
 //   motion.on('data', function (event) {
 //     if (event.detectedMotion) {
-//       led.on();
+//       motionDetectedLed.on();
 //       sendMessage('motion changed', { detectedMotion: true });
 //     } else {
-//       led.off();
+//       motionDetectedLed.off();
 //       sendMessage('motion changed', { detectedMotion: false });
 //     }
 //   });
 // });
+
+function turnOnLed(led) {
+  led.on();
+}
+
+function turnOffLed(led) {
+  led.off();
+}
+
+function turnOnGreenLed() {
+  greenLed.on();
+}
+
+function turnOffGreenLed() {
+  greenLed.off();
+}
 
 function sendMessage(event, data) {
   io.emit(event, data);
