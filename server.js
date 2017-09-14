@@ -11,6 +11,16 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
+app.post('/plus', function (req, res) {
+  sendMessage('motion changed', { detectedMotion: true });
+  res.send({ action: 'plus', success: true });
+});
+
+app.post('/min', function (req, res) {
+  sendMessage('motion changed', { detectedMotion: false });
+  res.send({ action: 'min', success: true });
+});
+
 http.listen(PORT, () => {
   console.log(`Server: app listening on port ${PORT}`);
 });
@@ -21,7 +31,9 @@ io.on('connection', function (socket) {
 
 const BOARD_COM_PORT = "COM5";
 const five = require('johnny-five');
-const board = new five.Board({ port: BOARD_COM_PORT });
+const board = new five.Board({
+  port: BOARD_COM_PORT
+});
 
 board.on('ready', function () {
   console.log('Arduino: board ready!');
