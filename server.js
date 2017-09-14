@@ -11,6 +11,10 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
+app.get('/control', function (req, res) {
+  res.sendFile(path.join(__dirname, 'public/control.html'));
+});
+
 app.post('/plus', function (req, res) {
   sendMessage('motion changed', { detectedMotion: true });
   res.send({ action: 'plus', success: true });
