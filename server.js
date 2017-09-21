@@ -3,7 +3,10 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const path = require('path');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
+
+const { makeSendMessage } = require('./websocket.js');
+const sendMessage = makeSendMessage(io);
 
 app.use('/', express.static(path.join(__dirname, 'public')))
 
@@ -31,74 +34,139 @@ http.listen(PORT, () => {
 
 io.on('connection', function (socket) {
   console.log('Socket: client connected');
-  socket.on('percentage updated',  function (data) {
-    let currentPercentage = data;
-    if (currentPercentage === 100) {
-      turnOnGreenLed();
-    } else {
-      turnOffGreenLed();
-    }
-  });
 });
 
-const MOTION_DETECTED_LED = 13;
-const GREEN_LED = 5;
-const LEFT_RED_LED = 3;
-const RIGHT_RED_LED = 4;
+const Kinect2 = require('kinect2');
+const kinect = new Kinect2();
 
-let motionDetectedLed = {};
-let greenLed = {};
-let leftRedLed = {};
-let rightRedLed = {};
+const { calculatePercentage } = require('./calculate-percentage.js');
+const { throttle } = require('./util.js');
 
-// const BOARD_COM_PORT = "COM5";
-// const five = require('johnny-five');
-// const board = new five.Board({
-//   port: BOARD_COM_PORT
-// });
+if (kinect.open()) {
+  console.log("Kinect: Opened");
 
-// board.on('ready', function () {
-//   console.log('Arduino: board ready!');
+  kinect.on('bodyFrame', throttle(onKinectInput, 500));
 
-//   motionDetectedLed = new five.Led(MOTION_DETECTED_LED);
-//   greenLed = new five.Led(GREEN_LED);
+  let bodyStates = {};
+  let amountOfTrackedBodies = 0;
 
-//   let motion = new five.Motion({
-//     pin: 2,
-//     freq: 500
-//   });
+  function onKinectInput(data) {
+    let trackedBodies = data.bodies.filter(body => body.tracked);
+    amountOfTrackedBodies = trackedBodies.length;
 
-//   motion.on('calibrated', function () {
-//     console.log('Motion sensor: calibrated');
-//   });
+    trackedBodies.forEach(body => {
+      onBodyFrameTracked(body);
+    });
 
-//   motion.on('data', function (event) {
-//     if (event.detectedMotion) {
-//       motionDetectedLed.on();
-//       sendMessage('motion changed', { detectedMotion: true });
-//     } else {
-//       motionDetectedLed.off();
-//       sendMessage('motion changed', { detectedMotion: false });
-//     }
-//   });
-// });
+    let amountDancing = 0;
+    for (var trackingId in bodyStates) {
+      // If a body that has been tracked in the past isn't in the collection of bodies that is currently being tracked it can't be dancing.
+      if (trackedBodies.findIndex(body => body.trackingId == trackingId) == -1) {
+        bodyStates[trackingId].isDancing = false;
+      }
 
-function turnOnLed(led) {
-  led.on();
-}
+      if (bodyStates[trackingId].isDancing) {
+        amountDancing++;
+      }
+    }
 
-function turnOffLed(led) {
-  led.off();
-}
+    let trackedBodyStates = [];
+    trackedBodies.forEach(trackedBody => {
+      trackedBodyStates.push(bodyStates[trackedBody.trackingId]);
+    });
 
-function turnOnGreenLed() {
-  greenLed.on();
-}
+    // if (trackedBodyStates.length === 0) {
+    //   return;
+    // }
 
-function turnOffGreenLed() {
-  greenLed.off();
-}
+    const amountOfTrackedBodiesDancing = trackedBodyStates.filter(trackedBodyState => trackedBodyState.isDancing).length;
+    const calculateAverage = values => values.reduce((sum, currentValue) => sum += currentValue, 0) / ((values.length) || 1);
 
-function sendMessage(event, data) {
-  io.emit(event, data);
+    let kinectData = {
+      amountTracked: amountOfTrackedBodies,
+      amountDancing: amountOfTrackedBodiesDancing,
+      averageDeltaX: calculateAverage(trackedBodyStates.map(trackedBodyState => trackedBodyState.averageDeltaX < 0 ? trackedBodyState.averageDeltaX * -1 : trackedBodyState.averageDeltaX)),
+      averageDeltaY: calculateAverage(trackedBodyStates.map(trackedBodyState => trackedBodyState.averageDeltaY < 0 ? trackedBodyState.averageDeltaY * -1 : trackedBodyState.averageDeltaY))
+    }
+    // console.log(`Average delta X: ${testdata.averageDeltaX}\naverage delta Y: ${testdata.averageDeltaY}`);
+    let calculatedPercentage = calculatePercentage(kinectData.amountTracked, kinectData.amountDancing, kinectData.averageDeltaX, kinectData.averageDeltaY);
+    console.log(`Percentage: ${calculatedPercentage}`);
+    sendMessage('kinect input', { percentage: calculatedPercentage });
+    //console.log(`Amount tracking: ${amountOfTrackedBodies}, amount dancing: ${amountDancing}`);
+  }
+
+  function onBodyFrameTracked(bodyFrame) {
+    const latestBodyFrameState = bodyStates[bodyFrame.trackingId];
+
+    const getOrientationXAndY = joint => {
+      return {
+        orientationX: joint.orientationX,
+        orientationY: joint.orientationY
+      }
+    }
+
+    const currentBodyFrameJoints = bodyFrame.joints.map(getOrientationXAndY);
+
+    let movement = {
+      isDancing: false,
+      averageDeltaX: 0,
+      averageDeltaY: 0
+    };
+
+    // If the current bodyFrame hasn't been tracked before, it's movement can't be calculated.
+    if (latestBodyFrameState) {
+      movement = calculateMovementDifference(latestBodyFrameState.joints, currentBodyFrameJoints);
+    }
+
+    bodyStates[bodyFrame.trackingId] = {
+      isDancing: movement.isDancing,
+      joints: currentBodyFrameJoints,
+      averageDeltaX: movement.averageDeltaX,
+      averageDeltaY: movement.averageDeltaY
+    }
+  }
+
+  function calculateMovementDifference(previousJointStates, currentJointStates) {
+    const PERCENTAGE_MOVE_THRESHOLD = 15;
+
+    const amountOfJoints = previousJointStates.length;
+    let amountOfJointsMoved = 0;
+    let totalDeltaX = 0;
+    let totalDeltaY = 0;
+
+    for (let i = 0; i < amountOfJoints; i++) {
+      let prevOrientationX = previousJointStates[i].orientationX;
+      let prevOrientationY = previousJointStates[i].orientationY;
+      let currOrientationX = currentJointStates[i].orientationX;
+      let currOrientationY = currentJointStates[i].orientationY;
+
+      let deltaX = (((currOrientationX - prevOrientationX) / prevOrientationX) || 0) * 100;
+      let deltaY = (((currOrientationY - prevOrientationY) / prevOrientationY) || 0) * 100;
+      if (deltaX > PERCENTAGE_MOVE_THRESHOLD || deltaX < (PERCENTAGE_MOVE_THRESHOLD * -1)) {
+        amountOfJointsMoved++;
+        // todo: uuuuhm uuuhm, opslaan van hoeveel movement er is
+      }
+
+      if (deltaY > PERCENTAGE_MOVE_THRESHOLD || deltaY < (PERCENTAGE_MOVE_THRESHOLD * -1)) {
+        amountOfJointsMoved++;
+      }
+
+      totalDeltaX += deltaX;
+      totalDeltaY += deltaY;
+    }
+
+    // if (amountOfJointsMoved > 15) {
+    // 	console.log('dancing');
+    // } else {
+    // 	console.log('not dancing');
+    // }
+
+    return {
+      isDancing: amountOfJointsMoved > 10,
+      averageDeltaX: totalDeltaX / amountOfJoints,
+      averageDeltaY: totalDeltaY / amountOfJoints
+    };
+  }
+
+  kinect.openBodyReader();
 }
