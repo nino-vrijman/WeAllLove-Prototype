@@ -63,7 +63,8 @@
             top: 0;
             z-index: 1;
             pointer-events: none;
-            max-width: calc(100vw - 15px);
+            max-width: calc(100vw - 25px);
+            max-height: calc(100vh - 25px);
         }
     </style>
 </head>
@@ -200,6 +201,7 @@
                 }
             }
             gauge5.update(getal);
+            sendMeterPercentage(getal);
         }
 
         // END METER SCRIPT

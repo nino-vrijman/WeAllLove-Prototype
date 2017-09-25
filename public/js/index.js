@@ -8,10 +8,14 @@ $(function () {
     socket.on('kinect input', function (data) {
         console.log(data.percentage);
         onKinectInput(data.percentage);
-    })
+    });
+
+    socket.on('restart', function () {
+        window.location.reload();
+    });
 
     function sendMeterPercentage(percentage) {
-        socket.emit('percentage updated', percentage);
+        socket.emit('percentage', percentage);
     }
 
     window.sendMeterPercentage = sendMeterPercentage;

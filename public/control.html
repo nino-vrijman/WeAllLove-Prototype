@@ -9,7 +9,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script lang="javascript">
         $(function () {
-            $('.update-percentage').on('click', function (event) {
+            $('.update-meter-page').on('click', function (event) {
                 var url = $(this).attr('data-url');
                 updateMeter(url);
             });
@@ -35,8 +35,9 @@
 </head>
 
 <body>
-    <input type="button" class="update-percentage" value="+" data-url="plus">
-    <input type="button" class="update-percentage" value="-" data-url="min">
+    <input type="button" class="update-meter-page" value="+" data-url="plus">
+    <input type="button" class="update-meter-page" value="-" data-url="min">
+    <input type="button" class="update-meter-page" value="restart" data-url="restart">
 </body>
 
 </html>

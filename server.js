@@ -3,7 +3,7 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const path = require('path');
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 const { makeSendMessage } = require('./websocket.js');
 const sendMessage = makeSendMessage(io);
@@ -28,12 +28,20 @@ app.post('/min', function (req, res) {
   res.send({ action: 'min', success: true });
 });
 
+app.post('/restart', (req, res) => {
+  sendMessage('restart', {});
+  res.send({ action: 'restart', success: true });
+})
+
 http.listen(PORT, () => {
   console.log(`Server: app listening on port ${PORT}`);
 });
 
 io.on('connection', function (socket) {
   console.log('Socket: client connected');
+  socket.on('percentage', function (data) {
+    console.log(`Current percentage: ${data}`);
+  });
 });
 
 const Kinect2 = require('kinect2');
@@ -127,7 +135,7 @@ if (kinect.open()) {
   }
 
   function calculateMovementDifference(previousJointStates, currentJointStates) {
-    const PERCENTAGE_MOVE_THRESHOLD = 15;
+    const PERCENTAGE_MOVE_THRESHOLD = 20;
 
     const amountOfJoints = previousJointStates.length;
     let amountOfJointsMoved = 0;
