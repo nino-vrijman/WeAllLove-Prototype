@@ -5,6 +5,12 @@ const io = require('socket.io')(http);
 const path = require('path');
 const PORT = process.env.PORT || 3000;
 
+const five = require('johnny-five');
+
+const EVENTS = {
+  MOTION_CHANGED: 'motion changed'
+}
+
 app.use('/', express.static(path.join(__dirname, 'public')))
 
 app.get('/', function (req, res) {
@@ -12,12 +18,12 @@ app.get('/', function (req, res) {
 });
 
 app.post('/plus', function (req, res) {
-  sendMessage('motion changed', { detectedMotion: true });
+  sendMessage(EVENTS.MOTION_CHANGED, { detectedMotion: true });
   res.send({ action: 'plus', success: true });
 });
 
 app.post('/min', function (req, res) {
-  sendMessage('motion changed', { detectedMotion: false });
+  sendMessage(EVENTS.MOTION_CHANGED, { detectedMotion: false });
   res.send({ action: 'min', success: true });
 });
 
@@ -30,7 +36,6 @@ io.on('connection', function (socket) {
 });
 
 const BOARD_COM_PORT = "COM5";
-const five = require('johnny-five');
 const board = new five.Board({
   port: BOARD_COM_PORT
 });
@@ -51,10 +56,10 @@ board.on('ready', function () {
   motion.on('data', function (event) {
     if (event.detectedMotion) {
       led.on();
-      sendMessage('motion changed', { detectedMotion: true });
+      sendMessage(EVENTS.MOTION_CHANGED, { detectedMotion: true });
     } else {
       led.off();
-      sendMessage('motion changed', { detectedMotion: false });
+      sendMessage(EVENTS.MOTION_CHANGED, { detectedMotion: false });
     }
   });
 });
