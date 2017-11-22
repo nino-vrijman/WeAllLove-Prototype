@@ -83,10 +83,6 @@ if (kinect.open()) {
       trackedBodyStates.push(bodyStates[trackedBody.trackingId]);
     });
 
-    // if (trackedBodyStates.length === 0) {
-    //   return;
-    // }
-
     const amountOfTrackedBodiesDancing = trackedBodyStates.filter(trackedBodyState => trackedBodyState.isDancing).length;
     const calculateAverage = values => values.reduce((sum, currentValue) => sum += currentValue, 0) / ((values.length) || 1);
 
@@ -96,11 +92,10 @@ if (kinect.open()) {
       averageDeltaX: calculateAverage(trackedBodyStates.map(trackedBodyState => trackedBodyState.averageDeltaX < 0 ? trackedBodyState.averageDeltaX * -1 : trackedBodyState.averageDeltaX)),
       averageDeltaY: calculateAverage(trackedBodyStates.map(trackedBodyState => trackedBodyState.averageDeltaY < 0 ? trackedBodyState.averageDeltaY * -1 : trackedBodyState.averageDeltaY))
     }
-    // console.log(`Average delta X: ${testdata.averageDeltaX}\naverage delta Y: ${testdata.averageDeltaY}`);
+    
     let calculatedPercentage = calculatePercentage(kinectData.amountTracked, kinectData.amountDancing, kinectData.averageDeltaX, kinectData.averageDeltaY);
     console.log(`Percentage: ${calculatedPercentage}`);
     sendMessage('kinect input', { percentage: calculatedPercentage });
-    //console.log(`Amount tracking: ${amountOfTrackedBodies}, amount dancing: ${amountDancing}`);
   }
 
   function onBodyFrameTracked(bodyFrame) {
@@ -162,12 +157,6 @@ if (kinect.open()) {
       totalDeltaX += deltaX;
       totalDeltaY += deltaY;
     }
-
-    // if (amountOfJointsMoved > 15) {
-    // 	console.log('dancing');
-    // } else {
-    // 	console.log('not dancing');
-    // }
 
     return {
       isDancing: amountOfJointsMoved > 10,
